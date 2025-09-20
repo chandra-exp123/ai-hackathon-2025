@@ -1,0 +1,9 @@
+langchain
+langchain-google-genai
+streamlit
+faiss-cpu
+pypdf
+beautifulsoup4
+markdown
+langchain_community
+python-dotenv
