@@ -6,34 +6,57 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, GoogleGenerativ
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 
+# ==============================
+# 🔑 Load Environment Variables
+# ==============================
 load_dotenv()
-
-# Check if the GOOGLE_API_KEY is set
 if "GOOGLE_API_KEY" not in os.environ:
     raise ValueError("GOOGLE_API_KEY not found in .env file")
 
-# Set up the Streamlit page
-st.set_page_config(page_title="RAG Technical Documentation Assistant", page_icon=":books:")
-st.title("RAG Technical Documentation Assistant")
-st.write("Ask a question about your technical documents and get a context-aware answer.")
+# ==============================
+# 🎨 Streamlit Page Config
+# ==============================
+st.set_page_config(
+    page_title="RAG Technical Documentation Assistant",
+    page_icon="📚",
+    layout="wide"
+)
 
-# Load the vector store
+# ==============================
+# 🎨 Load External CSS
+# ==============================
+def load_css(file_name: str):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+load_css("style.css")
+
+# ==============================
+# 🚀 Page Header
+# ==============================
+st.markdown('<div class="title">📚 RAG Technical Documentation Assistant</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Ask a question about your technical documents and get an AI-powered, context-aware answer.</div>', unsafe_allow_html=True)
+
+# ==============================
+# 📦 Load Vectorstore
+# ==============================
 @st.cache_resource
 def load_vectorstore():
-    """
-    Loads the FAISS vector store.
-    """
     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
     vectorstore = FAISS.load_local("vectorstore", embeddings, allow_dangerous_deserialization=True)
     return vectorstore
 
 vectorstore = load_vectorstore()
 
-# Set up the LLM and the RAG chain
+# ==============================
+# 🤖 LLM & RAG Chain Setup
+# ==============================
 llm = GoogleGenerativeAI(model="gemini-2.5-flash")
 
 prompt_template = """
-Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.
+Use the following context to answer the question at the end. 
+If you don't know the answer, just say you don't know. 
+Do not make up an answer.
 
 Context:
 {context}
@@ -53,17 +76,28 @@ qa_chain = RetrievalQA.from_chain_type(
     return_source_documents=True,
 )
 
-# Get user input and display the response
-query = st.text_input("Ask a question:")
+# ==============================
+# 💬 User Interaction
+# ==============================
+query = st.text_input("🔍 Enter your question here:", placeholder="e.g., How does authentication work in this system?")
 
-if st.button("Get Answer"):
+col1, col2 = st.columns([1, 4])
+with col1:
+    submit = st.button("Get Answer", use_container_width=True)
+
+# ==============================
+# 📖 Response Section
+# ==============================
+if submit:
     if query:
-        with st.spinner("Generating answer..."):
+        with st.spinner("⚡ Generating answer..."):
             result = qa_chain({"query": query})
-            st.subheader("Answer:")
-            st.write(result["result"])
-            st.subheader("Sources:")
-            for source in result["source_documents"]:
-                st.write(f"- {source.metadata['source']}")
+
+        st.subheader("✅ Answer")
+        st.markdown(f"<div class='answer-box'>{result['result']}</div>", unsafe_allow_html=True)
+
+        st.subheader("📂 Sources")
+        for i, source in enumerate(result["source_documents"], start=1):
+            st.markdown(f"<div class='source-box'>🔗 {i}. {source.metadata['source']}</div>", unsafe_allow_html=True)
     else:
-        st.warning("Please enter a question.")
+        st.warning("⚠️ Please enter a question.")
